@@ -1,2 +1,4 @@
 pygame-ce
 pygame-menu
+pygame-ce
+opencv-python
