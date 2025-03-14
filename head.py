@@ -1,64 +1,59 @@
 # head.py
 
-import cv2
 import pygame
 import random
-import os
 from settings import WIDTH, HEIGHT
-
-# Create Images folder if not exists
-if not os.path.exists("Images"):
-    os.makedirs("Images")
-
-def capture_photo():
-    """Captures a photo using the webcam and saves it."""
-    cam = cv2.VideoCapture(0)
-    cv2.namedWindow("Take a Picture (Press SPACE to capture)")
-
-    while True:
-        ret, frame = cam.read()
-        if not ret:
-            print("Failed to capture image.")
-            break
-
-        cv2.imshow("Take a Picture (Press SPACE to capture)", frame)
-
-        key = cv2.waitKey(1)
-        if key == 32:  # SPACE key to capture
-            image_path = "Images/captured_head.png"
-            cv2.imwrite(image_path, frame)  # Save without rotation
-            break
-        elif key == 27:  # ESC key to cancel
-            cam.release()
-            cv2.destroyAllWindows()
-            exit()
-
-    cam.release()
-    cv2.destroyAllWindows()
-    return image_path
 
 class Head:
     """Represents the bouncing head target."""
     
-    def __init__(self):
-        image_path = capture_photo()
-        self.image = pygame.image.load(image_path)
-        self.image = pygame.transform.scale(self.image, (80, 80))
-        self.x = random.randint(100, WIDTH - 100)
-        self.y = random.randint(100, HEIGHT // 2)  # Start in the upper half
-        self.speed_x = random.choice([-3, 3])
-        self.speed_y = random.choice([-3, 3])
+    def __init__(self, head_img, obstacles):
+        """Initialize the head with a preloaded image."""
+        self.image = pygame.transform.scale(head_img, (80, 80))
+        self.radius = 40  # Define hitbox for bullets
+        self.x, self.y = self.find_safe_spawn(obstacles)
+        self.speed_x = random.choice([-1, 1])  # Slower movement
+        self.speed_y = random.choice([-1, 1])
 
-    def move(self):
-        """Moves the head and bounces off walls."""
-        self.x += self.speed_x
-        self.y += self.speed_y
+    def find_safe_spawn(self, obstacles):
+        """Finds a safe location for the head that does not overlap obstacles."""
+        max_attempts = 100
+        for _ in range(max_attempts):
+            x = random.randint(50, WIDTH - self.radius * 2 - 50)
+            y = random.randint(100, HEIGHT // 2 - self.radius * 2 - 50)  # Now avoids top 100px (timer area)
+
+            # Ensure space is free
+            too_close = any(
+                ((x - obs.x) ** 2 + (y - obs.y) ** 2) ** 0.5 < self.radius + obs.radius + 30
+                for obs in obstacles
+            )
+
+            if not too_close:
+                return x, y  # Found a valid position
+        return 100, 150  # Fallback position, below the timer
+
+    def move(self, obstacles):
+        """Moves the head and bounces off walls and obstacles."""
+        new_x = self.x + self.speed_x
+        new_y = self.y + self.speed_y
 
         # Bounce off walls
-        if self.x <= 0 or self.x >= WIDTH - 80:
-            self.speed_x = -self.speed_x
-        if self.y <= 0 or self.y >= HEIGHT // 2:
-            self.speed_y = -self.speed_y
+        if new_x <= 0 or new_x >= WIDTH - self.radius * 2:
+            self.speed_x = -self.speed_x + random.choice([-1, 1])  # Small random boost to escape
+        if new_y <= 0 or new_y >= HEIGHT // 2 - self.radius * 2:
+            self.speed_y = -self.speed_y + random.choice([-1, 1])
+
+        # Check collision with obstacles
+        for obstacle in obstacles:
+            distance = ((new_x + self.radius - obstacle.x) ** 2 + (new_y + self.radius - obstacle.y) ** 2) ** 0.5
+            if distance < self.radius + obstacle.radius:  # Bounce if it collides
+                self.speed_x = -self.speed_x + random.choice([-1, 1])
+                self.speed_y = -self.speed_y + random.choice([-1, 1])
+                break
+
+        # Update position
+        self.x += self.speed_x
+        self.y += self.speed_y
 
     def draw(self, screen):
         """Draws the head."""
