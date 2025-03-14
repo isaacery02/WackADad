@@ -2,7 +2,9 @@
 
 import cv2
 import pygame
+import random
 import os
+from settings import WIDTH, HEIGHT
 
 # Create Images folder if not exists
 if not os.path.exists("Images"):
@@ -35,9 +37,29 @@ def capture_photo():
     cv2.destroyAllWindows()
     return image_path
 
-def load_photo():
-    """Loads the captured head image into pygame."""
-    image_path = capture_photo()
-    head_img = pygame.image.load(image_path)
-    head_img = pygame.transform.scale(head_img, (100, 100))
-    return head_img
+class Head:
+    """Represents the bouncing head target."""
+    
+    def __init__(self):
+        image_path = capture_photo()
+        self.image = pygame.image.load(image_path)
+        self.image = pygame.transform.scale(self.image, (80, 80))
+        self.x = random.randint(100, WIDTH - 100)
+        self.y = random.randint(100, HEIGHT // 2)  # Start in the upper half
+        self.speed_x = random.choice([-3, 3])
+        self.speed_y = random.choice([-3, 3])
+
+    def move(self):
+        """Moves the head and bounces off walls."""
+        self.x += self.speed_x
+        self.y += self.speed_y
+
+        # Bounce off walls
+        if self.x <= 0 or self.x >= WIDTH - 80:
+            self.speed_x = -self.speed_x
+        if self.y <= 0 or self.y >= HEIGHT // 2:
+            self.speed_y = -self.speed_y
+
+    def draw(self, screen):
+        """Draws the head."""
+        screen.blit(self.image, (self.x, self.y))

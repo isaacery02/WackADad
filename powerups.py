@@ -8,24 +8,43 @@ from settings import WIDTH, HEIGHT
 powerup_img = pygame.image.load("Images/powerup.png")
 powerup_img = pygame.transform.scale(powerup_img, (40, 40))
 
-def generate_powerups(obstacles, num_powerups=2):
-    """Generates power-ups that don't overlap obstacles."""
-    power_ups = []
-    while len(power_ups) < num_powerups:
-        x = random.randint(50, WIDTH - 50)
-        y = random.randint(50, HEIGHT - 50)
+class PowerUp:
+    """Represents a moving power-up."""
+    
+    def __init__(self, obstacles):
+        while True:
+            self.x = random.randint(50, WIDTH - 50)
+            self.y = random.randint(50, HEIGHT - 50)
+            self.radius = 20
+            self.speed_x = random.choice([-4, 4])  # Moves faster than the head
+            self.speed_y = random.choice([-4, 4])
 
-        too_close = any(
-            ((x - obs["x"]) ** 2 + (y - obs["y"]) ** 2) ** 0.5 < 50
-            for obs in obstacles
-        )
+            # Ensure power-up doesn't spawn inside an obstacle
+            if not any(
+                ((self.x - obs["x"]) ** 2 + (self.y - obs["y"]) ** 2) ** 0.5 < self.radius + obs["radius"] + 10
+                for obs in obstacles
+            ):
+                break  # Found a valid position
+    
+    def move(self, obstacles):
+        """Moves the power-up, bouncing off walls & obstacles."""
+        self.x += self.speed_x
+        self.y += self.speed_y
 
-        if not too_close:
-            power_ups.append({"x": x, "y": y})
+        # Bounce off walls
+        if self.x <= 0 or self.x >= WIDTH - self.radius:
+            self.speed_x = -self.speed_x
+        if self.y <= 0 or self.y >= HEIGHT - self.radius:
+            self.speed_y = -self.speed_y
 
-    return power_ups
+        # Bounce off obstacles
+        for obstacle in obstacles:
+            distance = ((self.x - obstacle["x"]) ** 2 + (self.y - obstacle["y"]) ** 2) ** 0.5
+            if distance < self.radius + obstacle["radius"]:
+                self.speed_x = -self.speed_x
+                self.speed_y = -self.speed_y
+                break  # Prevent multiple bounces in one frame
 
-def draw_powerups(screen, power_ups):
-    """Draws power-ups on the screen."""
-    for power in power_ups:
-        screen.blit(powerup_img, (power["x"] - 20, power["y"] - 20))
+    def draw(self, screen):
+        """Draws the power-up on screen."""
+        screen.blit(powerup_img, (self.x - self.radius, self.y - self.radius))
