@@ -8,6 +8,7 @@ from head import Head
 from player import Player
 from bullet import Bullet
 from obstacles import Obstacle
+from powerups import PowerUp
 
 # Initialize pygame display
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -21,8 +22,10 @@ def run_game():
     player = Player()
     head = Head()  # Capture and use the new webcam photo
     obstacles = [Obstacle() for _ in range(3)]
+    powerups = [PowerUp() for _ in range(2)]  # Spawn 2 power-ups
     bullets = []
     score = 0
+    bullet_speed = -6  # Default bullet speed
 
     clock = pygame.time.Clock()
     running = True
@@ -37,12 +40,14 @@ def run_game():
                 running = False
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                bullets.append(Bullet(player.x, player.y))
+                bullets.append(Bullet(player.x, player.y, bullet_speed))
                 gunshot_sound.play()
 
         # Move entities
         player.move(keys)
         head.move()
+        for powerup in powerups:
+            powerup.move()
         for bullet in bullets:
             bullet.move()
 
@@ -64,6 +69,14 @@ def run_game():
                 score += 1
                 head = Head()  # Capture a new photo for the head
 
+        # Check bullet collision with power-ups
+        for bullet in bullets[:]:
+            for powerup in powerups[:]:
+                if powerup.x < bullet.x < powerup.x + 40 and powerup.y < bullet.y < powerup.y + 40:
+                    bullets.remove(bullet)
+                    powerups.remove(powerup)
+                    bullet_speed = -8  # Increase bullet speed
+
         # Draw everything
         player.draw(screen)
         head.draw(screen)
@@ -71,6 +84,8 @@ def run_game():
             bullet.draw(screen)
         for obstacle in obstacles:
             obstacle.draw(screen)
+        for powerup in powerups:
+            powerup.draw(screen)
 
         screen.blit(font.render(f"Score: {score}", True, BLACK), (10, 10))
         pygame.display.flip()

@@ -6,10 +6,10 @@ from settings import HEIGHT
 class Bullet:
     """Represents a bullet fired by the player."""
     
-    def __init__(self, x, y):
+    def __init__(self, x, y, speed):
         self.x = x + 25  # Centered from the gun
         self.y = y
-        self.speed = -6
+        self.speed = speed  # Dynamic speed based on power-up
         self.radius = 5
 
     def move(self):
